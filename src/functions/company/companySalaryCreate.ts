@@ -3,8 +3,11 @@ import UserSalaries from "../../models/UserSalaries";
 import UserBank from "../../models/UserBank";
 import { toMs } from 'ms-typescript';
 import prettyMS from 'pretty-ms';
+import userBankLogging from "../log/userBankLogging";
 
-const companySalaryCreate = async (interaction: { member: { roles: { cache: any[]; }; }; reply: (arg0: { embeds: EmbedBuilder[]; ephemeral: boolean; }) => any; guild: { id: any; }; followUp: (arg0: { embeds: EmbedBuilder[]; ephemeral: boolean; }) => any; }, client: { users: { cache: { get: (arg0: any) => any; }; }; }, user: any, amount: any, cooldown: number, name: any) => {
+const companySalaryCreate = async (interaction: {
+    channel: any;
+    member: { roles: { cache: any[]; }; }; reply: (arg0: { embeds: EmbedBuilder[]; ephemeral: boolean; }) => any; guild: { id: any; }; followUp: (arg0: { embeds: EmbedBuilder[]; ephemeral: boolean; }) => any; }, client: { users: { cache: { get: (arg0: any) => any; }; }; }, user: any, amount: any, cooldown: number, name: any) => {
     try {
         if (!interaction.member.roles.cache.some(r => ["Kastov en chef de l'économie"].includes(r.name))) {
             const noPermissionEmbed = new EmbedBuilder()
@@ -124,14 +127,45 @@ const companySalaryCreate = async (interaction: { member: { roles: { cache: any[
             await userSalaries.save();
         }
 
-        const salaryCreateEmbed = new EmbedBuilder()
-            .setTitle('Salary Create :')
-            .setDescription(`Un salaire pour <@${user}> avec comme nom **${name}** pour **$${amount}** tous les **${prettyMS(msCooldown, { verbose: true })}** a bien été créé.`)
-            .setColor("Green");
-        await interaction.reply({
-            embeds: [salaryCreateEmbed],
-            ephemeral: true,
-        });
+        const dUser = interaction.channel.guild.members.cache.get(user);
+        const readableCooldown = prettyMS(msCooldown, { verbose: true })
+
+        let errTrigger = 0;
+        const userDMEmbed = new EmbedBuilder()
+            .setTitle('Company Important Notification :')
+            .setDescription(`Un salaire viens d'être créé en votre nom, en voici son contenu : \n
+              Membre : <@${user}> \n
+              Nom de salaire : **${name}** \n
+              Montant du salaire : **$${amount}/${readableCooldown}**`)
+            .setColor("DarkAqua");
+            await dUser.send({
+                embeds: [userDMEmbed],
+            });
+        if (errTrigger === 1) {
+            const failedDMEmbed = new EmbedBuilder()
+                .setTitle('Failed DM Error :')
+                .setDescription(`Un salaire pour <@${user}> avec comme nom **${name}** pour **$${amount}** tous les **${readableCooldown}** a bien été créé. mais une erreur est survenue lors de la tentative de DM du membre. Merci de DM manuellement le membre et contacter <@580160894395219968>`)
+                .setColor("DarkOrange");
+            await interaction.reply({
+                embeds: [failedDMEmbed],
+                ephemeral: true,
+            });
+        } else {
+            const salaryCreateEmbed = new EmbedBuilder()
+                .setTitle('Salary Create :')
+                .setDescription(`Un salaire pour <@${user}> avec comme nom **${name}** pour **$${amount}** tous les **${readableCooldown}** a bien été créé. Le propriétaire du compte en a été notifié.`)
+                .setColor("Green");
+            await interaction.reply({
+                embeds: [salaryCreateEmbed],
+                ephemeral: true,
+            });
+        }
+        const actionId = 5;
+        const actionName = `Salary Create - ${name}`;
+        const content = `Un salaire du nom de **${name}** a été créé pour <@${user}> avec un montant de **$${amount}/${readableCooldown}**`;
+        const logUserId = user;
+        const logGuildId = interaction.guild.id;
+        await userBankLogging(actionId, actionName, content, logUserId, logGuildId);
     } catch (e) {
         const failEmbed = new EmbedBuilder()
             .setTitle("Code Error :")

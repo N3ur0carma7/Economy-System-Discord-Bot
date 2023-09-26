@@ -1,5 +1,4 @@
 import UserLogs from "../../models/UserLogs";
-import { EmbedBuilder } from 'discord.js';
 
 const userBankLogging = async (actionId: any, actionName: any, content: any, logUserId: any, guildId: any) => {
     try {

@@ -83,6 +83,10 @@ const data = {
                                     name: 'Account Delete',
                                     value: 4,
                                 },
+                                {
+                                    name: 'Account Salaries Information',
+                                    value: 5,
+                                },
                             ],
                         },
                     ]
